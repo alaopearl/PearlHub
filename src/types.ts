@@ -59,6 +59,7 @@ export type ViewType =
   | "tech"
   | "education"
   | "tools"
+  | "study"
   | "tool-detail"
   | "article"
   | "about"

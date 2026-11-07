@@ -7,14 +7,68 @@ import { toast } from "sonner";
 import { supabase } from "../integrations/supabase/client";
 
 const LOGO_URL = "https://dala-prod-public-storage.s3.eu-west-1.amazonaws.com/attachments/2279f60b-da80-4165-b5eb-bcd80ff90107/1793990664534_PearlHub_Tech_Learning_Logo.webp";
-const ADMIN_PIN = "pearlhub2025";
 
 type Tab = "dashboard" | "articles" | "tools" | "authors" | "subscribers" | "messages";
 
 export default function AdminPanel({ onBack }: { onBack: () => void }) {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem("pearlhub-admin") === "1");
-  const [pin, setPin] = useState("");
+  const [authed, setAuthed] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loggingIn, setLoggingIn] = useState(true);
   const [tab, setTab] = useState<Tab>("dashboard");
+
+  const checkAdminAccess = useCallback(async (userId?: string) => {
+    if (!userId) {
+      setAuthed(false);
+      setLoggingIn(false);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("admin_users")
+      .select("user_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const authorized = !error && Boolean(data);
+    if (userId && !authorized) {
+      await supabase.auth.signOut();
+      toast.error("This account is not authorized for admin access.");
+    }
+    setAuthed(authorized);
+    setLoggingIn(false);
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      void checkAdminAccess(data.session?.user.id);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      void checkAdminAccess(session?.user.id);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, [checkAdminAccess]);
+
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLoggingIn(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) {
+      toast.error(error.message);
+      setLoggingIn(false);
+      return;
+    }
+    await checkAdminAccess(data.user?.id);
+    if (!data.user) toast.error("Unable to verify this account.");
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setAuthed(false);
+    setPassword("");
+  };
+
+  if (loggingIn && !authed) {
+    return <div className="min-h-[80vh] flex items-center justify-center"><Loader /></div>;
+  }
 
   if (!authed) return (
     <div className="min-h-[80vh] flex items-center justify-center px-4">
@@ -23,11 +77,15 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
           <div className="bg-black rounded-xl p-3"><img src={LOGO_URL} alt="PearlHub" className="h-12 w-auto" /></div>
         </div>
         <h2 className="text-xl font-bold text-center mb-2">Admin Portal</h2>
-        <p className="text-sm text-muted-foreground text-center mb-6">Enter your access code to manage PearlHub.</p>
-        <form onSubmit={(e) => { e.preventDefault(); if (pin === ADMIN_PIN) { sessionStorage.setItem("pearlhub-admin", "1"); setAuthed(true); toast.success("Welcome back!"); } else toast.error("Invalid code"); }}>
-          <input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="Access code"
+        <p className="text-sm text-muted-foreground text-center mb-6">Sign in with an authorized PearlHub administrator account.</p>
+        <form onSubmit={handleLogin}>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Admin email" required
+            className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple mb-3" />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required
             className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple mb-4" />
-          <button type="submit" className="w-full py-3 rounded-lg bg-brand-purple text-white font-medium hover:bg-brand-purple-light transition-colors">Unlock Dashboard</button>
+          <button type="submit" disabled={loggingIn} className="w-full py-3 rounded-lg bg-brand-purple text-white font-medium hover:bg-brand-purple-light transition-colors disabled:opacity-60">
+            {loggingIn ? "Signing in..." : "Sign in to Dashboard"}
+          </button>
         </form>
         <button onClick={onBack} className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground">Back to site</button>
       </div>
@@ -52,7 +110,7 @@ export default function AdminPanel({ onBack }: { onBack: () => void }) {
             <div className="bg-black rounded-lg px-2 py-1"><img src={LOGO_URL} alt="PearlHub" className="h-7 w-auto" /></div>
             <span className="text-sm font-semibold text-muted-foreground hidden sm:inline">Admin Panel</span>
           </div>
-          <button onClick={() => { sessionStorage.removeItem("pearlhub-admin"); setAuthed(false); }} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted">
+          <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted">
             <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Logout</span>
           </button>
         </div>

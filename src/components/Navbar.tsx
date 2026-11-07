@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { label: "Technology", view: "tech" },
   { label: "Education", view: "education" },
   { label: "Online Tools", view: "tools" },
+  { label: "Study Space", view: "study" },
   { label: "About", view: "about" },
   { label: "Contact", view: "contact" },
   { label: "Admin", view: "admin" },
@@ -102,7 +103,7 @@ export default function Navbar({ activeView, onNavigate, onOpenSearch, onOpenBoo
             </button>
 
             <a
-              href="https://github.com/pearlhub"
+              href="https://github.com/alaopearl/PearlHub"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 rounded-lg text-text-secondary hover:text-brand-purple transition-colors"
@@ -155,7 +156,7 @@ export default function Navbar({ activeView, onNavigate, onOpenSearch, onOpenBoo
                 </button>
               ))}
               <a
-                href="https://github.com/pearlhub"
+                href="https://github.com/alaopearl/PearlHub"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary dark:hover:text-white transition-colors"

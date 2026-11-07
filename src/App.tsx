@@ -12,6 +12,7 @@ import {
   AboutPage,
   ContactPage,
   LegalPage,
+  StudentSpacePage,
 } from "./components/PageViews";
 import { ArticleReaderPage, ToolDetailPage } from "./components/DetailViews";
 import AdminPanel from "./components/AdminPanel";
@@ -45,6 +46,17 @@ export default function App() {
   }, [bookmarks]);
 
   useEffect(() => {
+    const openSearch = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", openSearch);
+    return () => window.removeEventListener("keydown", openSearch);
+  }, []);
+
+  useEffect(() => {
     let active = true;
     loadContent().then((state) => {
       if (active) setSyncState(state);
@@ -76,6 +88,8 @@ export default function App() {
         return <EducationPage navigate={navigate} />;
       case "tools":
         return <ToolsPage navigate={navigate} />;
+      case "study":
+        return <StudentSpacePage />;
       case "tool-detail":
         return <ToolDetailPage toolId={selectedId ?? ""} navigate={navigate} bookmarks={bookmarks} onToggleBookmark={toggleBookmark} />;
       case "article":

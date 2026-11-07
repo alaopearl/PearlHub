@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight, ArrowLeft, BookOpen, Wrench, Clock, Calendar, Tag,
@@ -62,6 +62,29 @@ interface DetailPageProps {
 export function ArticleReaderPage({ articleId, navigate, bookmarks, onToggleBookmark }: { articleId: string } & DetailPageProps) {
   const article = ARTICLES.find((a) => a.id === articleId);
   const [copied, setCopied] = useState(false);
+  const [readingProgress, setReadingProgress] = useState(0);
+
+  useEffect(() => {
+    if (!article) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem("pearlhub-recent-articles") ?? "[]");
+      const recent = Array.isArray(saved) ? saved.filter((id) => id !== article.id) : [];
+      localStorage.setItem("pearlhub-recent-articles", JSON.stringify([article.id, ...recent].slice(0, 8)));
+    } catch {
+      localStorage.setItem("pearlhub-recent-articles", JSON.stringify([article.id]));
+    }
+    const updateProgress = () => {
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      setReadingProgress(scrollable > 0 ? Math.min(100, Math.max(0, (window.scrollY / scrollable) * 100)) : 0);
+    };
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("resize", updateProgress);
+    return () => {
+      window.removeEventListener("scroll", updateProgress);
+      window.removeEventListener("resize", updateProgress);
+    };
+  }, [article]);
   if (!article) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-24 text-center">
@@ -81,6 +104,13 @@ export function ArticleReaderPage({ articleId, navigate, bookmarks, onToggleBook
   };
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
+      <div className="fixed left-0 top-0 z-[60] h-1 w-full bg-transparent">
+        <div
+          className="h-full bg-primary transition-[width] duration-150"
+          style={{ width: `${readingProgress}%` }}
+          aria-label={`${Math.round(readingProgress)}% read`}
+        />
+      </div>
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
         <button onClick={() => navigate("home")} className="hover:text-foreground transition-colors">Home</button>

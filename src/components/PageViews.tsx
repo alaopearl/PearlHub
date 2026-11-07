@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight, BookOpen, Wrench, Users, Globe, Sparkles,
   Clock, Calendar, Tag, ChevronRight, Send, Mail, Phone, MapPin,
   Heart, Star, Percent, GraduationCap, Layers, Type, Hash, Clipboard,
   Calculator, Scale, ArrowLeftRight, QrCode, Lightbulb, Target, Eye, Shield,
-  Github, ExternalLink,
+  Github, ExternalLink, Timer, Trash2, Plus, Play, Pause, RotateCcw,
+  CheckCircle2, Circle, ClipboardCheck,
 } from "lucide-react";
 import { ARTICLES, TOOLS, AUTHORS, SITE_STATS } from "../mockData";
 import { toast } from "sonner";
@@ -106,6 +107,16 @@ function FilterPills({ items, active, onSelect }: { items: string[]; active: str
 export function HomePage({ navigate }: { navigate: (v: string, id?: string) => void }) {
   const featured = ARTICLES.filter((a) => a.featured).slice(0, 4);
   const popularTools = TOOLS.slice(0, 4);
+  const [recentArticles] = useState(() => {
+    try {
+      const ids = JSON.parse(localStorage.getItem("pearlhub-recent-articles") ?? "[]");
+      return Array.isArray(ids)
+        ? ids.map((id) => ARTICLES.find((article) => article.id === id)).filter(Boolean).slice(0, 4) as Article[]
+        : [];
+    } catch {
+      return [];
+    }
+  });
   return (
     <div>
       {/* Hero */}
@@ -152,6 +163,46 @@ export function HomePage({ navigate }: { navigate: (v: string, id?: string) => v
           ))}
         </div>
       </section>
+
+      {/* Explore by category */}
+      <section className="px-4 pt-16">
+        <div className="mx-auto grid max-w-6xl gap-4 sm:grid-cols-3">
+          {[
+            { title: "Technology", text: "AI, programming, gadgets, and software guides.", view: "tech", icon: BookOpen },
+            { title: "Education", text: "Study resources, scholarships, and academic tools.", view: "education", icon: GraduationCap },
+            { title: "Online Tools", text: "Fast calculators and utilities that work on any device.", view: "tools", icon: Wrench },
+          ].map((category) => (
+            <button
+              key={category.title}
+              onClick={() => navigate(category.view)}
+              className="group rounded-2xl border border-border bg-card p-6 text-left shadow-sm transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
+            >
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <category.icon className="h-5 w-5" />
+              </div>
+              <h3 className="mb-1 font-bold text-foreground">{category.title}</h3>
+              <p className="mb-4 text-sm text-muted-foreground">{category.text}</p>
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">Explore <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {recentArticles.length > 0 && (
+        <section className="px-4 pt-16">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground">Recently Viewed</h2>
+              <p className="mt-1 text-muted-foreground">Pick up where you left off</p>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {recentArticles.map((article) => (
+                <ArticleCard key={article.id} article={article} onClick={() => navigate("article", article.id)} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Featured Articles */}
       <section className="px-4 py-16">
@@ -218,10 +269,27 @@ export function TechnologyPage({ navigate }: { navigate: (v: string, id?: string
   const techArticles = ARTICLES.filter((a) => a.category === "technology");
   const subs = ["All", ...Array.from(new Set(techArticles.map((a) => a.subcategory)))];
   const [filter, setFilter] = useState("All");
-  const filtered = filter === "All" ? techArticles : techArticles.filter((a) => a.subcategory === filter);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("featured");
+  const filtered = techArticles
+    .filter((a) => filter === "All" || a.subcategory === filter)
+    .filter((a) => `${a.title} ${a.excerpt} ${a.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => {
+      if (sort === "title") return a.title.localeCompare(b.title);
+      if (sort === "newest") return b.date.localeCompare(a.date);
+      return Number(b.featured) - Number(a.featured);
+    });
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       <PageHeader title="Technology Hub" subtitle="In-depth guides, tutorials, and reviews covering AI, programming, software, and gadgets." icon={BookOpen} />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex-1">
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search technology guides..." className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+        </div>
+        <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort technology articles" className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-muted-foreground outline-none">
+          <option value="featured">Featured first</option><option value="newest">Newest first</option><option value="title">Title A-Z</option>
+        </select>
+      </div>
       <FilterPills items={subs} active={filter} onSelect={setFilter} />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((a) => (
@@ -243,10 +311,25 @@ export function EducationPage({ navigate }: { navigate: (v: string, id?: string)
   const eduArticles = ARTICLES.filter((a) => a.category === "education");
   const subs = ["All", ...Array.from(new Set(eduArticles.map((a) => a.subcategory)))];
   const [filter, setFilter] = useState("All");
-  const filtered = filter === "All" ? eduArticles : eduArticles.filter((a) => a.subcategory === filter);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("featured");
+  const filtered = eduArticles
+    .filter((a) => filter === "All" || a.subcategory === filter)
+    .filter((a) => `${a.title} ${a.excerpt} ${a.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => {
+      if (sort === "title") return a.title.localeCompare(b.title);
+      if (sort === "newest") return b.date.localeCompare(a.date);
+      return Number(b.featured) - Number(a.featured);
+    });
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       <PageHeader title="Education Hub" subtitle="Study guides, exam preparation, scholarship resources, and academic tools for Nigerian students." icon={GraduationCap} />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search education guides..." className="flex-1 rounded-lg border border-border bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+        <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort education articles" className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-muted-foreground outline-none">
+          <option value="featured">Featured first</option><option value="newest">Newest first</option><option value="title">Title A-Z</option>
+        </select>
+      </div>
       <FilterPills items={subs} active={filter} onSelect={setFilter} />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((a) => (
@@ -267,16 +350,188 @@ export function EducationPage({ navigate }: { navigate: (v: string, id?: string)
 export function ToolsPage({ navigate }: { navigate: (v: string, id?: string) => void }) {
   const cats = ["All", ...Array.from(new Set(TOOLS.map((t) => t.category)))];
   const [filter, setFilter] = useState("All");
-  const filtered = filter === "All" ? TOOLS : TOOLS.filter((t) => t.category === filter);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("name");
+  const filtered = TOOLS
+    .filter((t) => filter === "All" || t.category === filter)
+    .filter((t) => `${t.name} ${t.description} ${t.category}`.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => sort === "category" ? a.category.localeCompare(b.category) : a.name.localeCompare(b.name));
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       <PageHeader title="Online Tools" subtitle="Free calculators, converters, and utilities for students, professionals, and everyday tasks." icon={Wrench} />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search tools..." className="flex-1 rounded-lg border border-border bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+        <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort tools" className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-muted-foreground outline-none">
+          <option value="name">Name A-Z</option><option value="category">Category</option>
+        </select>
+      </div>
       <FilterPills items={cats} active={filter} onSelect={setFilter} />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((t) => (
           <ToolCard key={t.id} tool={t} onClick={() => navigate("tool-detail", t.id)} />
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ─── STUDENT SPACE ─── */
+interface StudyTask {
+  id: string;
+  title: string;
+  dueDate: string;
+  priority: "High" | "Medium" | "Low";
+  completed: boolean;
+}
+
+export function StudentSpacePage() {
+  const [tasks, setTasks] = useState<StudyTask[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("pearlhub-study-tasks") ?? "[]");
+      return Array.isArray(saved) ? saved : [];
+    } catch {
+      return [];
+    }
+  });
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDate, setTaskDate] = useState("");
+  const [taskPriority, setTaskPriority] = useState<StudyTask["priority"]>("Medium");
+  const [examName, setExamName] = useState(() => localStorage.getItem("pearlhub-exam-name") ?? "");
+  const [examDate, setExamDate] = useState(() => localStorage.getItem("pearlhub-exam-date") ?? "");
+  const [notes, setNotes] = useState(() => localStorage.getItem("pearlhub-study-notes") ?? "");
+  const [minutes, setMinutes] = useState(25);
+  const [secondsLeft, setSecondsLeft] = useState(25 * 60);
+  const [running, setRunning] = useState(false);
+  const [sessionType, setSessionType] = useState<"Focus" | "Break">("Focus");
+
+  useEffect(() => {
+    localStorage.setItem("pearlhub-study-tasks", JSON.stringify(tasks));
+  }, [tasks]);
+  useEffect(() => {
+    localStorage.setItem("pearlhub-study-notes", notes);
+  }, [notes]);
+  useEffect(() => {
+    localStorage.setItem("pearlhub-exam-name", examName);
+  }, [examName]);
+  useEffect(() => {
+    localStorage.setItem("pearlhub-exam-date", examDate);
+  }, [examDate]);
+  useEffect(() => {
+    if (!running) return;
+    const timer = window.setInterval(() => {
+      setSecondsLeft((current) => {
+        if (current <= 1) {
+          const nextType = sessionType === "Focus" ? "Break" : "Focus";
+          const nextMinutes = nextType === "Focus" ? 25 : 5;
+          setSessionType(nextType);
+          setMinutes(nextMinutes);
+          toast.success(nextType === "Focus" ? "Break finished. Ready to focus!" : "Focus session complete. Take a break!");
+          return nextMinutes * 60;
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [running, sessionType]);
+
+  const addTask = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!taskTitle.trim()) {
+      toast.error("Enter an assignment or study task.");
+      return;
+    }
+    setTasks((current) => [
+      { id: crypto.randomUUID(), title: taskTitle.trim(), dueDate: taskDate, priority: taskPriority, completed: false },
+      ...current,
+    ]);
+    setTaskTitle("");
+    setTaskDate("");
+  };
+
+  const resetTimer = () => {
+    setRunning(false);
+    setSecondsLeft(minutes * 60);
+  };
+
+  const examDays = examDate
+    ? Math.ceil((new Date(`${examDate}T23:59:59`).getTime() - Date.now()) / 86400000)
+    : null;
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <PageHeader title="Student Study Space" subtitle="Plan assignments, track deadlines, take notes, and stay focused with a built-in study timer." icon={GraduationCap} />
+
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="rounded-xl border border-border bg-card p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Assignment Planner</h2>
+              <p className="text-sm text-muted-foreground">{tasks.filter((task) => !task.completed).length} active tasks</p>
+            </div>
+            <ClipboardCheck className="h-5 w-5 text-primary" />
+          </div>
+
+          <form onSubmit={addTask} className="mb-5 grid gap-3 sm:grid-cols-[1fr_140px_110px_auto]">
+            <input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Assignment or study task" className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+            <input type="date" value={taskDate} onChange={(event) => setTaskDate(event.target.value)} className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none" />
+            <select value={taskPriority} onChange={(event) => setTaskPriority(event.target.value as StudyTask["priority"])} className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none">
+              <option>High</option><option>Medium</option><option>Low</option>
+            </select>
+            <button type="submit" className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"><Plus className="h-4 w-4" /> Add</button>
+          </form>
+
+          <div className="space-y-2">
+            {tasks.map((task) => (
+              <div key={task.id} className={`flex items-center gap-3 rounded-lg border border-border p-3 ${task.completed ? "opacity-60" : ""}`}>
+                <button aria-label={task.completed ? "Mark task active" : "Mark task complete"} onClick={() => setTasks((current) => current.map((item) => item.id === task.id ? { ...item, completed: !item.completed } : item))}>
+                  {task.completed ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm font-medium text-foreground ${task.completed ? "line-through" : ""}`}>{task.title}</p>
+                  <p className="text-xs text-muted-foreground">{task.dueDate ? `Due ${new Date(`${task.dueDate}T00:00:00`).toLocaleDateString()}` : "No due date"} · {task.priority} priority</p>
+                </div>
+                <button aria-label="Delete task" onClick={() => setTasks((current) => current.filter((item) => item.id !== task.id))} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-red-500">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            {tasks.length === 0 && <div className="py-10 text-center text-sm text-muted-foreground">No assignments yet. Add your first task above.</div>}
+          </div>
+        </section>
+
+        <div className="space-y-6">
+          <section className="rounded-xl border border-border bg-card p-6 text-center">
+            <div className="mb-2 flex items-center justify-center gap-2 text-sm font-medium text-primary"><Timer className="h-4 w-4" /> {sessionType} Timer</div>
+            <div className="mb-4 text-5xl font-bold tabular-nums text-foreground">
+              {String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:{String(secondsLeft % 60).padStart(2, "0")}
+            </div>
+            <div className="flex justify-center gap-2">
+              <button onClick={() => setRunning((current) => !current)} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+                {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}{running ? "Pause" : "Start"}
+              </button>
+              <button onClick={resetTimer} aria-label="Reset timer" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><RotateCcw className="h-4 w-4" /></button>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-border bg-card p-6">
+            <div className="mb-4 flex items-center gap-2"><Target className="h-5 w-5 text-primary" /><h2 className="font-semibold text-foreground">Exam Countdown</h2></div>
+            <input value={examName} onChange={(event) => setExamName(event.target.value)} placeholder="Exam name" className="mb-3 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none" />
+            <input type="date" value={examDate} onChange={(event) => setExamDate(event.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none" />
+            {examName && examDate && examDays !== null && (
+              <div className="mt-4 rounded-lg bg-primary/5 p-4 text-center">
+                <p className="text-sm text-muted-foreground">{examName}</p>
+                <p className="text-2xl font-bold text-primary">{examDays > 0 ? `${examDays} days left` : examDays === 0 ? "Today" : "Date passed"}</p>
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+
+      <section className="mt-6 rounded-xl border border-border bg-card p-6">
+        <div className="mb-3 flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /><h2 className="font-semibold text-foreground">Quick Study Notes</h2></div>
+        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={8} placeholder="Capture formulas, lecture notes, revision ideas, or questions..." className="w-full resize-y rounded-lg border border-border bg-background px-4 py-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-primary/30" />
+        <p className="mt-2 text-xs text-muted-foreground">Notes are saved automatically on this device.</p>
+      </section>
     </div>
   );
 }
@@ -328,7 +583,7 @@ export function AboutPage({ navigate }: { navigate: (v: string, id?: string) => 
           </p>
           <div className="flex flex-wrap gap-3">
             <a
-              href="https://github.com/pearlhub"
+              href="https://github.com/alaopearl/PearlHub"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90 transition-opacity"
@@ -336,7 +591,7 @@ export function AboutPage({ navigate }: { navigate: (v: string, id?: string) => 
               <Github className="h-4 w-4" /> View Repository
             </a>
             <a
-              href="https://github.com/pearlhub/issues"
+              href="https://github.com/alaopearl/PearlHub/issues"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
@@ -432,7 +687,7 @@ export function ContactPage() {
         </div>
         <div className="space-y-4 lg:col-span-2">
           <a
-            href="https://github.com/pearlhub"
+            href="https://github.com/alaopearl/PearlHub"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-colors"

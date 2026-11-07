@@ -87,9 +87,10 @@ export default function Footer({ onNavigate }: FooterProps) {
               </div>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-lg bg-brand-purple hover:bg-brand-purple-light text-white text-sm font-medium transition-colors flex items-center gap-2 shrink-0"
+                disabled={subscribing}
+                className="px-5 py-2.5 rounded-lg bg-brand-purple hover:bg-brand-purple-light text-white text-sm font-medium transition-colors flex items-center gap-2 shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Subscribe <ArrowRight className="w-4 h-4" />
+                {subscribing ? "Joining..." : "Subscribe"} <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           </div>
@@ -114,7 +115,7 @@ export default function Footer({ onNavigate }: FooterProps) {
               <span>Nigeria &amp; Global</span>
             </div>
             <div className="flex items-center gap-3">
-              <a href="https://github.com/pearlhub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light transition-colors" aria-label="GitHub">
+              <a href="https://github.com/alaopearl/PearlHub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light transition-colors" aria-label="GitHub">
                 <Github className="w-5 h-5" />
               </a>
               <a href="https://twitter.com/pearlhub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light transition-colors" aria-label="Twitter">
@@ -155,7 +156,7 @@ export default function Footer({ onNavigate }: FooterProps) {
               &copy; 2025 PearlHub. Built with <Heart className="w-3 h-3 text-red-400 fill-red-400" /> for learners everywhere.
             </p>
             <div className="flex items-center gap-4">
-              <a href="https://github.com/pearlhub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light text-xs transition-colors flex items-center gap-1">
+              <a href="https://github.com/alaopearl/PearlHub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light text-xs transition-colors flex items-center gap-1">
                 <Github className="w-3.5 h-3.5" /> GitHub
               </a>
               {LEGAL_LINKS.map((link) => (
