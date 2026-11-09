@@ -701,9 +701,9 @@ export function ContactPage() {
             </div>
           </a>
           {[
-            { icon: Mail, label: "Email", value: "hello@pearlhub.ng" },
-            { icon: Phone, label: "Phone", value: "+234 800 PEARL HUB" },
-            { icon: MapPin, label: "Location", value: "Lagos, Nigeria" },
+            { icon: Mail, label: "Email", value: "edumanage02@gmail.com" },
+            { icon: Phone, label: "Phone", value: "+234 808 948 9320" },
+            { icon: MapPin, label: "Location", value: "Lagos, Oyo, Nigeria" },
             { icon: Clock, label: "Response Time", value: "Within 24-48 hours" },
           ].map((c) => (
             <div key={c.label} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
