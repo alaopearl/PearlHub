@@ -26,6 +26,7 @@ export interface Article {
   tags: string[];
   featured: boolean;
   gradient: string;
+  difficulty?: "all-levels" | "beginner" | "intermediate" | "advanced";
 }
 
 export interface ToolInput {

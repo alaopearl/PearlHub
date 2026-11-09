@@ -40,6 +40,7 @@ const mapArticle = (r: Row): Article => ({
   tags: Array.isArray(r.tags) ? r.tags : [],
   featured: Boolean(r.featured),
   gradient: r.gradient ?? "from-primary to-primary",
+  difficulty: r.difficulty ?? "all-levels",
 });
 
 const mapTool = (r: Row): ToolItem => ({

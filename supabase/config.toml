@@ -1,0 +1,8 @@
+[functions.send-study-reminders]
+verify_jwt = false
+
+[functions.solve-assignment]
+verify_jwt = true
+
+[functions.send-newsletter]
+verify_jwt = true

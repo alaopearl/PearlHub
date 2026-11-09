@@ -41,6 +41,57 @@ function ToolRoute({ navigate, bookmarks, onToggleBookmark }: {
   return <ToolDetailPage toolId={tool?.id ?? ""} navigate={navigate} bookmarks={bookmarks} onToggleBookmark={onToggleBookmark} />;
 }
 
+function PageMetadata() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const parts = pathname.split("/").filter(Boolean);
+    const article = parts[0] === "articles" ? ARTICLES.find((item) => item.slug === parts[1]) : undefined;
+    const tool = parts[0] === "tools" && parts[1] ? TOOLS.find((item) => item.slug === parts[1]) : undefined;
+    const pageTitle = article?.title ?? tool?.name ?? ({
+      "/": "Learn Smarter. Build Better.",
+      "/technology": "Technology Hub",
+      "/education": "Education Hub",
+      "/tools": "Online Tools",
+      "/study": "Student Study Space",
+      "/about": "About PearlHub",
+      "/contact": "Contact PearlHub",
+      "/privacy": "Privacy Policy",
+      "/terms": "Terms of Service",
+      "/disclaimer": "Disclaimer",
+      "/admin": "Admin Portal",
+    }[pathname] ?? "PearlHub");
+    const description = article?.excerpt ?? tool?.description ?? "Technology guides, education resources, and useful tools for students and lifelong learners.";
+    document.title = `${pageTitle} | PearlHub`;
+
+    const setMeta = (selector: string, attribute: "name" | "property", key: string, content: string) => {
+      let element = document.head.querySelector<HTMLMetaElement>(selector);
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attribute, key);
+        document.head.append(element);
+      }
+      element.content = content;
+    };
+
+    setMeta('meta[name="description"]', "name", "description", description);
+    setMeta('meta[property="og:title"]', "property", "og:title", pageTitle);
+    setMeta('meta[property="og:description"]', "property", "og:description", description);
+    setMeta('meta[name="robots"]', "name", "robots", pathname === "/admin" ? "noindex, nofollow" : "index, follow");
+
+    const canonicalBase = import.meta.env.VITE_SITE_URL || window.location.origin;
+    let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.append(canonical);
+    }
+    canonical.href = new URL(pathname, `${canonicalBase.replace(/\/+$/, "")}/`).href;
+  }, [pathname]);
+
+  return null;
+}
+
 function AppLayout() {
   const navigateTo = useNavigate();
   const { pathname } = useLocation();
@@ -153,6 +204,7 @@ function AppLayout() {
         bookmarkCount={bookmarks.length}
       />
       <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} onNavigate={navigate} />
+      <PageMetadata />
       <BookmarksModal
         isOpen={bookmarksOpen}
         onClose={() => setBookmarksOpen(false)}

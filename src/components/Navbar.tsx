@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Sun, Moon, Menu, X, Bookmark, Github } from "lucide-react";
+import { Search, Sun, Moon, Menu, X, Bookmark } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const NAV_LINKS = [
@@ -102,16 +102,6 @@ export default function Navbar({ activeView, onNavigate, onOpenSearch, onOpenBoo
               )}
             </button>
 
-            <a
-              href="https://github.com/alaopearl/PearlHub"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-lg text-text-secondary hover:text-brand-purple transition-colors"
-              aria-label="GitHub repository"
-            >
-              <Github className="w-5 h-5" />
-            </a>
-
             <button
               onClick={onToggleTheme}
               className="p-2 rounded-lg text-text-secondary hover:text-brand-purple transition-colors"
@@ -155,14 +145,6 @@ export default function Navbar({ activeView, onNavigate, onOpenSearch, onOpenBoo
                   {link.label}
                 </button>
               ))}
-              <a
-                href="https://github.com/alaopearl/PearlHub"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-md text-sm font-medium text-text-secondary hover:text-text-primary dark:hover:text-white transition-colors"
-              >
-                <Github className="w-4 h-4" /> GitHub
-              </a>
             </div>
           </motion.div>
         )}

@@ -1,6 +1,7 @@
 .env
 .env.local
 .env.*.local
+supabase/functions/.env
 node_modules/
 dist/
 .supabase/

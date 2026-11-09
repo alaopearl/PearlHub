@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, ArrowRight, Globe, Heart, Github, Twitter, Linkedin } from "lucide-react";
+import { Mail, ArrowRight, Globe, Heart, Twitter, Linkedin } from "lucide-react";
 import { toast } from "sonner";
 import { subscribeNewsletter } from "../integrations/supabase/data";
 
@@ -115,9 +115,6 @@ export default function Footer({ onNavigate }: FooterProps) {
               <span>Nigeria &amp; Global</span>
             </div>
             <div className="flex items-center gap-3">
-              <a href="https://github.com/alaopearl/PearlHub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light transition-colors" aria-label="GitHub">
-                <Github className="w-5 h-5" />
-              </a>
               <a href="https://twitter.com/pearlhub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light transition-colors" aria-label="Twitter">
                 <Twitter className="w-5 h-5" />
               </a>
@@ -156,9 +153,6 @@ export default function Footer({ onNavigate }: FooterProps) {
               &copy; 2025 PearlHub. Built with <Heart className="w-3 h-3 text-red-400 fill-red-400" /> for learners everywhere.
             </p>
             <div className="flex items-center gap-4">
-              <a href="https://github.com/alaopearl/PearlHub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light text-xs transition-colors flex items-center gap-1">
-                <Github className="w-3.5 h-3.5" /> GitHub
-              </a>
               {LEGAL_LINKS.map((link) => (
                 <button
                   key={link.view}
