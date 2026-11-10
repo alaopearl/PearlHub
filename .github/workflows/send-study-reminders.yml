@@ -18,8 +18,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           REMINDER_CRON_SECRET: ${{ secrets.REMINDER_CRON_SECRET }}
         run: |
-          test -n "$SUPABASE_URL"
-          test -n "$REMINDER_CRON_SECRET"
+          if [ -z "$SUPABASE_URL" ] || [ -z "$REMINDER_CRON_SECRET" ]; then
+            echo "Study reminders are not configured; set the SUPABASE_URL and REMINDER_CRON_SECRET Actions secrets to enable them."
+            exit 0
+          fi
           curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Authorization: Bearer $REMINDER_CRON_SECRET" \
