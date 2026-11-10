@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../integrations/supabase/client";
+import { loadContent } from "../integrations/supabase/data";
 
 const LOGO_URL = "https://dala-prod-public-storage.s3.eu-west-1.amazonaws.com/attachments/2279f60b-da80-4165-b5eb-bcd80ff90107/1793990664534_PearlHub_Tech_Learning_Logo.webp";
 
@@ -256,17 +257,39 @@ function ArticlesTab() {
           </div>
         ))}
       </div>}
-      {(creating || editing) && <ArticleForm article={editing} onClose={() => { setCreating(false); setEditing(null); }} onSaved={fetch} />}
+      {(creating || editing) && <ArticleForm article={editing} onClose={() => { setCreating(false); setEditing(null); }} onSaved={async () => { await loadContent(); await fetch(); }} />}
     </div>
   );
 }
 
-function ArticleForm({ article, onClose, onSaved }: { article: AdminArticle | null; onClose: () => void; onSaved: () => void }) {
-  const [f, setF] = useState({ id: article?.id ?? `art-${Date.now()}`, title: article?.title ?? "", slug: article?.slug ?? "", excerpt: article?.excerpt ?? "", category: article?.category ?? "technology", subcategory: article?.subcategory ?? "", author_id: article?.author_id ?? "a1", published_at: article?.published_at ?? new Date().toISOString().slice(0, 10), read_time: String(article?.read_time ?? 5), featured: article?.featured ?? false, gradient: article?.gradient ?? "from-brand-purple to-brand-purple-light", tags: Array.isArray(article?.tags) ? article.tags.join(", ") : "", content: article?.content ? JSON.stringify(article.content) : "[]", status: article?.status ?? "draft", difficulty: article?.difficulty ?? "all-levels" });
+function ArticleForm({ article, onClose, onSaved }: { article: AdminArticle | null; onClose: () => void; onSaved: () => void | Promise<void> }) {
+  const [f, setF] = useState({ id: article?.id ?? `art-${Date.now()}`, title: article?.title ?? "", slug: article?.slug ?? "", excerpt: article?.excerpt ?? "", category: article?.category ?? "technology", subcategory: article?.subcategory ?? "", author_id: article?.author_id ?? "", published_at: article?.published_at ?? new Date().toISOString().slice(0, 10), read_time: String(article?.read_time ?? 5), featured: article?.featured ?? false, gradient: article?.gradient ?? "from-brand-purple to-brand-purple-light", tags: Array.isArray(article?.tags) ? article.tags.join(", ") : "", content: article?.content ? JSON.stringify(article.content) : "[]", status: article?.status ?? "draft", difficulty: article?.difficulty ?? "all-levels" });
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [authors, setAuthors] = useState<Array<{ id: string; name: string }>>([]);
+  const [authorsLoading, setAuthorsLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    supabase.from("authors").select("id, name").order("name").then(({ data, error }) => {
+      if (!active) return;
+      if (error) {
+        toast.error(`Could not load authors: ${error.message}`);
+      } else {
+        const availableAuthors = data ?? [];
+        setAuthors(availableAuthors);
+        if (!article?.author_id && availableAuthors.length > 0) {
+          setF((current) => ({ ...current, author_id: availableAuthors[0].id }));
+        }
+      }
+      setAuthorsLoading(false);
+    });
+    return () => { active = false; };
+  }, [article?.author_id]);
+
   const save = async () => {
     if (!f.title || !f.slug) { toast.error("Title and slug required"); return; }
+    if (authors.length > 0 && !f.author_id) { toast.error("Choose an author."); return; }
     let contentParsed: unknown;
     try {
       contentParsed = JSON.parse(f.content);
@@ -279,17 +302,27 @@ function ArticleForm({ article, onClose, onSaved }: { article: AdminArticle | nu
       return;
     }
     setSaving(true);
-    const payload = { id: f.id, title: f.title, slug: f.slug, excerpt: f.excerpt, category: f.category, subcategory: f.subcategory, author_id: f.author_id, published_at: f.published_at, read_time: Number(f.read_time), featured: f.featured, gradient: f.gradient, tags: f.tags ? f.tags.split(",").map((t) => t.trim()).filter(Boolean) : [], content: contentParsed, status: f.status, difficulty: f.difficulty };
+    const payload = { id: f.id, title: f.title, slug: f.slug, excerpt: f.excerpt, category: f.category, subcategory: f.subcategory, author_id: f.author_id || null, published_at: f.published_at, read_time: Number(f.read_time), featured: f.featured, gradient: f.gradient, tags: f.tags ? f.tags.split(",").map((t) => t.trim()).filter(Boolean) : [], content: contentParsed, status: f.status, difficulty: f.difficulty };
     const { error } = article ? await supabase.from("articles").update(payload).eq("id", article.id) : await supabase.from("articles").insert(payload);
     setSaving(false);
-    if (error) toast.error(error.message); else { toast.success(article ? "Updated" : "Created"); onClose(); onSaved(); }
+    if (error) toast.error(error.message); else { toast.success(article ? "Updated" : "Created"); onClose(); await onSaved(); }
   };
   const inp = (label: string, key: ArticleTextField, type = "text") => (<div><label className="text-xs font-medium text-muted-foreground">{label}</label><input type={type} value={f[key]} onChange={(e) => setF({ ...f, [key]: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-sm" /></div>);
   return (
     <Modal title={article ? "Edit Article" : "New Article"} onClose={onClose}>
       <div className="space-y-3">{inp("Title", "title")}{inp("Slug", "slug")}{inp("Excerpt", "excerpt")}
         <div className="grid grid-cols-2 gap-3"><div><label className="text-xs font-medium text-muted-foreground">Category</label><select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value as AdminArticle["category"] })} className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-sm"><option value="technology">Technology</option><option value="education">Education</option></select></div>{inp("Subcategory", "subcategory")}</div>
-        <div className="grid grid-cols-2 gap-3">{inp("Author ID", "author_id")}{inp("Date", "published_at", "date")}</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="article-author" className="text-xs font-medium text-muted-foreground">Author</label>
+            <select id="article-author" value={f.author_id} onChange={(event) => setF({ ...f, author_id: event.target.value })} disabled={authorsLoading} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm disabled:opacity-60">
+              <option value="">{authorsLoading ? "Loading authors…" : "Select an author"}</option>
+              {authors.map((author) => <option key={author.id} value={author.id}>{author.name}</option>)}
+            </select>
+            {!authorsLoading && authors.length === 0 && <p className="mt-1 text-xs text-amber-600">No authors found. You can save this article without an author.</p>}
+          </div>
+          {inp("Date", "published_at", "date")}
+        </div>
         <div className="grid grid-cols-2 gap-3">{inp("Read Min", "read_time", "number")}{inp("Tags", "tags")}</div>
         <div className="grid grid-cols-2 gap-3">
           <div><label className="text-xs font-medium text-muted-foreground">Publishing status</label><select value={f.status} onChange={(event) => setF({ ...f, status: event.target.value as ArticleStatus })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select></div>
@@ -348,13 +381,19 @@ function AuthorsTab() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<any | null>(null);
+  const [adding, setAdding] = useState(false);
   const fetch = useCallback(async () => { setLoading(true); const { data, error } = await supabase.from("authors").select("*").order("name"); if (error) toast.error(error.message); else setRows(data ?? []); setLoading(false); }, []);
   useEffect(() => { fetch(); }, [fetch]);
-  const del = async (id: string) => { if (!confirm("Delete?")) return; const { error } = await supabase.from("authors").delete().eq("id", id); if (error) toast.error(error.message); else { toast.success("Deleted"); fetch(); } };
+  const del = async (id: string) => { if (!confirm("Delete this author? Articles by this author will no longer be linked to them.")) return; const { error } = await supabase.from("authors").delete().eq("id", id); if (error) toast.error(error.message); else { toast.success("Deleted"); await loadContent(); fetch(); } };
   if (loading) return <Loader />;
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Authors ({rows.length})</h3>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="text-lg font-bold">Authors ({rows.length})</h3>
+        <button onClick={() => setAdding(true)} className="inline-flex items-center gap-2 rounded-lg bg-brand-purple px-3 py-2 text-sm font-medium text-white hover:bg-brand-purple-light">
+          <Plus className="h-4 w-4" /> Add author
+        </button>
+      </div>
       <div className="space-y-2">{rows.map((a) => (
         <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
           <div className="w-8 h-8 rounded-full bg-brand-purple/10 flex items-center justify-center text-xs font-bold text-brand-purple">{a.name?.charAt(0)}</div>
@@ -363,8 +402,67 @@ function AuthorsTab() {
           <button onClick={() => del(a.id)} className="p-1.5 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
         </div>
       ))}</div>
-      {editing && <SimpleForm title="Edit Author" initial={editing} fields={["name", "title", "avatar", "bio"]} table="authors" id={editing.id} onClose={() => setEditing(null)} onSaved={fetch} />}
+      {adding && <AddAuthorForm onClose={() => setAdding(false)} onSaved={async () => { setAdding(false); await loadContent(); await fetch(); }} />}
+      {editing && <SimpleForm title="Edit Author" initial={editing} fields={["name", "title", "avatar", "bio"]} table="authors" id={editing.id} onClose={() => setEditing(null)} onSaved={async () => { await loadContent(); await fetch(); }} />}
     </div>
+  );
+}
+
+function AddAuthorForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => Promise<void> }) {
+  const [name, setName] = useState("");
+  const [title, setTitle] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [bio, setBio] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const authorName = name.trim();
+    if (!authorName) {
+      toast.error("Enter the author's name.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("authors").insert({
+      id: crypto.randomUUID(),
+      name: authorName,
+      title: title.trim(),
+      avatar: avatar.trim() || authorName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
+      bio: bio.trim(),
+    });
+    setSaving(false);
+    if (error) {
+      toast.error(`Could not add author: ${error.message}`);
+      return;
+    }
+    toast.success("Author added.");
+    await onSaved();
+  };
+
+  return (
+    <Modal title="Add Author" onClose={onClose}>
+      <form onSubmit={save} className="space-y-3">
+        <div>
+          <label htmlFor="author-name" className="text-xs font-medium text-muted-foreground">Name *</label>
+          <input id="author-name" value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} autoFocus className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="Author name" />
+        </div>
+        <div>
+          <label htmlFor="author-title" className="text-xs font-medium text-muted-foreground">Title or role</label>
+          <input id="author-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="e.g. Education Editor" />
+        </div>
+        <div>
+          <label htmlFor="author-avatar" className="text-xs font-medium text-muted-foreground">Avatar initials</label>
+          <input id="author-avatar" value={avatar} onChange={(event) => setAvatar(event.target.value)} maxLength={4} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="Generated from name if empty" />
+        </div>
+        <div>
+          <label htmlFor="author-bio" className="text-xs font-medium text-muted-foreground">Bio</label>
+          <textarea id="author-bio" value={bio} onChange={(event) => setBio(event.target.value)} maxLength={1000} rows={4} className="mt-1 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="A short author biography" />
+        </div>
+        <button type="submit" disabled={saving} className="w-full rounded-lg bg-brand-purple py-2.5 font-medium text-white disabled:opacity-50">
+          {saving ? "Adding author..." : "Add author"}
+        </button>
+      </form>
+    </Modal>
   );
 }
 

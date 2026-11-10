@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, ArrowRight, Globe, Heart, Twitter, Linkedin } from "lucide-react";
+import { Mail, ArrowRight, Globe, Heart, Twitter, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { subscribeNewsletter } from "../integrations/supabase/data";
 
@@ -115,11 +115,11 @@ export default function Footer({ onNavigate }: FooterProps) {
               <span>Nigeria &amp; Global</span>
             </div>
             <div className="flex items-center gap-3">
-              <a href="https://twitter.com/pearlhub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light transition-colors" aria-label="Twitter">
+              <a href="https://twitter.com/pearlhubweb" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light transition-colors" aria-label="Twitter">
                 <Twitter className="w-5 h-5" />
               </a>
-              <a href="https://linkedin.com/company/pearlhub" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light transition-colors" aria-label="LinkedIn">
-                <Linkedin className="w-5 h-5" />
+              <a href="https://wa.me/2348089489320" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-brand-purple-light transition-colors" aria-label="WhatsApp">
+                <MessageCircle className="w-5 h-5" />
               </a>
             </div>
           </div>
